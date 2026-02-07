@@ -1,3 +1,5 @@
+from ChatGPT_HKBU import ChatGPT
+gpt = None
 '''
 This program requires the following modules:
 - python-telegram-bot==22.5
@@ -7,8 +9,10 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 import configparser
 import logging
+import os
 
 def main():
+    global gpt
     # Configure logging so you can see initialization and error messages
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
@@ -16,7 +20,11 @@ def main():
     # Load the configuration data from file
     logging.info('INIT: Loading configuration...')
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
+    config.read(config_path)
+
+    # Create the ChatGPT client after config is loaded
+    gpt = ChatGPT(config)
 
     # Create an Application for your bot
     logging.info('INIT: Connecting the Telegram bot...')
@@ -31,11 +39,15 @@ def main():
     app.run_polling()
 
 async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # await update.message.reply_text(response)
     logging.info("UPDATE: " + str(update))
+    loading_message = await update.message.reply_text('Thinking...')
 
-    # send the echo back to the client
-    text = update.message.text.upper()
-    await update.message.reply_text(text)
+    # send the user message to the ChatGPT client
+    response = gpt.submit(update.message.text)
+
+    # send the response to the Telegram box client
+    await loading_message.edit_text(response)
 
 if __name__ == '__main__':
     main()
